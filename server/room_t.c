@@ -60,7 +60,7 @@ char room_add_member(struct room_t *target, struct client_t *victim)
 	return 0;
 }
 
-static inline void room_remove_sth(struct room_t *target, size_t s) 
+static void room_remove_sth(struct room_t *target, size_t s) 
 {
 	target->rm_members[s]->cl_room = NULL;
 

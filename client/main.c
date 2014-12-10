@@ -12,8 +12,45 @@
 
 #define PORT "3490" // the port client will be connecting to 
 
-#define BUFF_SIZE 16
+#define PATH_TO_RECORD "~kawaguchi/record_bkup/client/record"
+#define PATH_TO_PLAYBACK "/usr/bin/aplay"
+
+#define BUFF_SIZE 4096
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
+
+void recv_handler(int *sock) 
+{
+	char **ename;
+
+	if (*sock < 0) {
+		fprintf(stderr, "Fuck off.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stderr, "Recieving on socket: %d\n", *sock);
+
+	ename = (char **) malloc(4 * sizeof(*ename)); 
+	*ename = (char **) malloc((32 * 4) * sizeof(**ename)); 
+	while (i < 4) 
+		*(ename + i) = *ename + (128 * i++);
+	
+	strcpy(*ename, PATH_TO_PLAYBACK);
+	strcpy(*(ename + 1), "-f");
+	strcpy(*(ename + 2), "cd");
+	*(ename + 3) = (char *) 0;
+	
+	if (fork()) {
+		/* ROFAL */
+		if (dup2(*sock, STDIN_FILENO) == -1) {
+			close(*sock);
+			perror("dup2");
+			exit(EXIT_FAILURE);
+		}
+		execvp(*ename, ename);
+		perror("dup2");
+		exit(EXIT_FAILURE);
+	}
+}
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -28,11 +65,13 @@ void *get_in_addr(struct sockaddr *sa)
 int main(int argc, char *argv[])
 {
 	int sockfd, numbytes;  
+	int rv, i = 0;
+	int send_pipes[2];
 	char buf[MAXDATASIZE];
 	struct addrinfo hints, *servinfo, *p;
-	int rv;
 	char s[INET6_ADDRSTRLEN];
-	int i = 0;
+	char **ename = (char **) malloc(4 * sizeof(char *));
+	char buff[BUFF_SIZE];
 
 	if (argc != 2) {
 		fprintf(stderr,"usage: client hostname\n");
@@ -48,7 +87,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// loop through all the results and connect to the first we can
 	for(p = servinfo; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype,
 						p->ai_protocol)) == -1) {
@@ -74,48 +112,32 @@ int main(int argc, char *argv[])
 			s, sizeof s);
 	printf("client: connecting to %s\n", s);
 
-	freeaddrinfo(servinfo); // all done with this structure
+	freeaddrinfo(servinfo); 
 
-	/*
-	if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-		perror("recv");
-		exit(1);
-	}
+	/*0888318047*/
 
-	buf[numbytes] = '\0';
-
-	printf("client: received '%s'\n",buf);
-	*/
-	char **ename = (char **) malloc(4 * sizeof(char *));
-	char buff[BUFF_SIZE];
-	pid_t ffdf;
-	/*
-	while (i < 4) {
-		*(ename + i) = (char *) malloc(128 * sizeof(char));
-		++i;
-	} 0888318047
-	*/
 	*ename = (char *) malloc((128 * 4) * sizeof(char));
 	while (i < 4) {
 		*(ename + i) = *ename + (128 * i);
 		++i;
 	}
-	//strcpy(*ename, "/home/kawaguchi/system-c/week4/record/client/run");
-	strcpy(*(ename + 0), "/home/kawaguchi/system-c/week4/record/client/record"); /* FIXME */
+
+	strcpy(*(ename + 0), PATH_TO_RECORD);
 	strcpy(*(ename + 1), "-");
 	*(ename + 2) = (char *) NULL;
-	int pipes[2];
-	if (pipe(pipes)) {
+
+	if (pipe(send_pipes)) {
 		close(sockfd);
 		perror("pipe");
 		exit(EXIT_FAILURE);
 	}
-	ffdf = fork();
-	if (!ffdf) {
-		//close(sockfd);
-		close(pipes[0]);
-		if (dup2(pipes[1], STDOUT_FILENO) == -1) {
-			close(pipes[1]);
+
+	if (fork()) {
+		close(sockfd);
+		close(send_pipes[0]);
+		if (dup2(send_pipes[1], STDOUT_FILENO) == -1) {
+			close(send_pipes[1]);
+			close(sockfd);
 			perror("dup2");
 			exit(EXIT_FAILURE);
 		}
@@ -123,13 +145,16 @@ int main(int argc, char *argv[])
 		perror("execvp");
 		exit(EXIT_FAILURE);
 	} else {
-		close(pipes[1]);
-		i = 0;
-		while (read(pipes[0], buff, BUFF_SIZE) > 0) 
+		close(send_pipes[1]);
+		/*i = 0;*/
+
+		recv_handler(&sockfd);
+
+		while (read(send_pipes[0], buff, BUFF_SIZE) > 0) 
 			send(sockfd, buff, BUFF_SIZE, 0);
 		close(sockfd);
 	}
-	close(sockfd);
+	close(sockfd); /* Why... */
 
 	return 0;
 }

@@ -26,7 +26,7 @@ static void client_dump_buffer(struct client_t *target)
 	pthread_mutex_lock(target->cl_buff_locked);
 	if (send(target->cl_sock, target->cl_buff, CLIENT_BUFFER_SIZE,0) < 0) {
 		perror("send");
-		exit(EXIT_FAILURE);
+		client_dc(target);
 	}
 	memset(target->cl_buff, 0, CLIENT_BUFFER_SIZE);
 	target->cl_write_p = target->cl_buff;
@@ -36,6 +36,7 @@ static void client_dump_buffer(struct client_t *target)
 int client_buff_push(struct client_t *target, char *buff, size_t sz) 
 { /* TODO: mutex; XXX <- Why is this highlighted? */
 	int c = 0;
+
 	pthread_mutex_lock(target->cl_buff_locked);
 
 	while (c < sz && target->cl_free > 0) {
@@ -82,7 +83,7 @@ return ret;
 }
 
 /* Write request */
-inline void client_wrq(struct client_t *target, char *buff, size_t sz) 
+static inline void client_wrq(struct client_t *target, char *buff, size_t sz) 
 {
 	#ifdef ROOM_WRQ
 	room_wrq(target->cl_room, buff, sz, target);
@@ -94,5 +95,14 @@ inline void client_wrq(struct client_t *target, char *buff, size_t sz)
 inline int client_pull(struct client_t *target, char *buff, size_t sz) 
 {
 	return recv(target->cl_sock, buff, sz, 0);
+}
+
+void client_dc(struct client_t *target) 
+{
+	close(target->cl_sock);
+	memset(target->cl_buff, 0, CLIENT_BUFFER_SIZE);
+	target->cl_write_p = target->cl_buff;
+	/* FIXME */
+	room_remove_member(target->cl_room, target);
 }
 
