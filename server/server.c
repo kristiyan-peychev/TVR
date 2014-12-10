@@ -81,8 +81,8 @@ static inline void init_clients(void)
   /* so there is no point in anyone using this right now */
 	unsigned i = 0;
 	while (i < BACKLOG) 
-		clients[i++] = NULL;
-		/*clients[i++] = client_init();*/
+		/*clients[i++] = NULL;*/
+		clients[i++] = client_init();
 }
 
 static void init_rooms(void) 

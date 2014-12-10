@@ -25,7 +25,7 @@ struct client_t {
 	char *cl_write_p;
 	size_t cl_free;
 
-	pthread_mutex_t *cl_buff_locked;
+	pthread_mutex_t cl_buff_locked;
 
 	struct room_t *cl_room;
 };

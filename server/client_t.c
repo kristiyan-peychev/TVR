@@ -21,23 +21,32 @@ inline void client_buff_clear(struct client_t *target)
 	target->cl_free = CLIENT_BUFFER_SIZE;
 }
 
+void client_dc(struct client_t *target) 
+{
+	close(target->cl_sock);
+	memset(target->cl_buff, 0, CLIENT_BUFFER_SIZE);
+	target->cl_write_p = target->cl_buff;
+	/* FIXME */
+	room_remove_member(target->cl_room, target);
+}
+
 static void client_dump_buffer(struct client_t *target) 
 {
-	pthread_mutex_lock(target->cl_buff_locked);
+	pthread_mutex_lock(&target->cl_buff_locked);
 	if (send(target->cl_sock, target->cl_buff, CLIENT_BUFFER_SIZE,0) < 0) {
 		perror("send");
 		client_dc(target);
 	}
 	memset(target->cl_buff, 0, CLIENT_BUFFER_SIZE);
 	target->cl_write_p = target->cl_buff;
-	pthread_mutex_unlock(target->cl_buff_locked);
+	pthread_mutex_unlock(&target->cl_buff_locked);
 }
 
 int client_buff_push(struct client_t *target, char *buff, size_t sz) 
 { /* TODO: mutex; XXX <- Why is this highlighted? */
 	int c = 0;
 
-	pthread_mutex_lock(target->cl_buff_locked);
+	pthread_mutex_lock(&target->cl_buff_locked);
 
 	while (c < sz && target->cl_free > 0) {
 		*target->cl_write_p = *buff++;
@@ -50,7 +59,7 @@ int client_buff_push(struct client_t *target, char *buff, size_t sz)
 		client_dump_buffer(target);
 		target->cl_free = CLIENT_BUFFER_SIZE;
 	}
-	pthread_mutex_unlock(target->cl_buff_locked);
+	pthread_mutex_unlock(&target->cl_buff_locked);
 
 	if (sz > c) 
 		return c + client_buff_push(target, buff, sz);
@@ -68,7 +77,7 @@ struct client_t *client_init(void)
 	ret->cl_free = CLIENT_BUFFER_SIZE;
 	ret->cl_room = NULL;
 	memset(ret->cl_buff, 0, CLIENT_BUFFER_SIZE);
-	pthread_mutex_init(ret->cl_buff_locked, NULL);
+	pthread_mutex_init(&ret->cl_buff_locked, NULL);
 return ret;
 }
 
@@ -78,7 +87,7 @@ return ret;
 		return;
 
 	close(target->cl_sock);
-	pthread_mutex_destroy(target->cl_buff_locked);
+	pthread_mutex_destroy(&target->cl_buff_locked);
 	free(target);
 }
 
@@ -97,12 +106,4 @@ inline int client_pull(struct client_t *target, char *buff, size_t sz)
 	return recv(target->cl_sock, buff, sz, 0);
 }
 
-void client_dc(struct client_t *target) 
-{
-	close(target->cl_sock);
-	memset(target->cl_buff, 0, CLIENT_BUFFER_SIZE);
-	target->cl_write_p = target->cl_buff;
-	/* FIXME */
-	room_remove_member(target->cl_room, target);
-}
 
