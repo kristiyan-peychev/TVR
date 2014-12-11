@@ -136,7 +136,7 @@ char room_send(struct room_t *target, char *buff, size_t sz,
 	size_t i = 0;
 	char ret;
 
-	fprintf(stderr, "Sending some shit to %d\n", target->rm_mem_count);
+	/*fprintf(stderr, "Sending some shit to %d\n", target->rm_mem_count);*/
 	pthread_mutex_lock(&target->rm_locked);
 
 	while (i < target->rm_mem_count) {
@@ -151,7 +151,7 @@ char room_send(struct room_t *target, char *buff, size_t sz,
 	}
 
 	pthread_mutex_unlock(&target->rm_locked);
-	fprintf(stderr, "Ret\n");
+	/*fprintf(stderr, "Ret\n");*/
 	return ret;
 }
 
@@ -162,7 +162,7 @@ static void room_build_select_list(struct room_t *target)
 
 	while (i < target->rm_mem_count) {
 		if (target->rm_members[i]->cl_sock != 0) {
-			fprintf(stderr, "Add\n");
+			/*fprintf(stderr, "Add\n");*/
 			FD_SET(target->rm_members[i]->cl_sock, 
 					&target->rm_sockset);
 
@@ -180,7 +180,7 @@ static void room_handle_data(struct room_t *target)
 	size_t i = 0;
 	int sz;
 	char buff[CLIENT_BUFFER_SIZE];
-	fprintf(stderr, "Handling data\n");
+	/*fprintf(stderr, "Handling data\n");*/
 
 	while (i < target->rm_mem_count) {
 		/* FIXME macro this damn shit? */

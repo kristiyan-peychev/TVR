@@ -32,25 +32,25 @@ void client_dc(struct client_t *target)
 
 static void client_dump_buffer(struct client_t *target) 
 {
-	fprintf(stderr, "Dump\n");
+	/*fprintf(stderr, "Dump\n");*/
 	/*pthread_mutex_lock(&target->cl_buff_locked);*/
-	fprintf(stderr, "Yay\n");
+	/*fprintf(stderr, "Yay\n");*/
 	if (send(target->cl_sock, target->cl_buff, CLIENT_BUFFER_SIZE, 0) < 0) {
 		perror("send");
 		client_dc(target);
 	}
-	fprintf(stderr, "Dumped.\n");
+	/*fprintf(stderr, "Dumped.\n");*/
 	memset(target->cl_buff, 0, CLIENT_BUFFER_SIZE);
 	target->cl_write_p = target->cl_buff;
 	/*pthread_mutex_unlock(&target->cl_buff_locked);*/
-	fprintf(stderr, "Dumped.\n");
+	/*fprintf(stderr, "Dumped.\n");*/
 }
 
 int client_buff_push(struct client_t *target, char *buff, size_t sz) 
 { /* TODO: mutex; XXX <- Why is this highlighted? */
 	int c = 0;
 
-	fprintf(stderr, "Push\n");
+	/*fprintf(stderr, "Push\n");*/
 	pthread_mutex_lock(&target->cl_buff_locked);
 
 	while (c < sz && target->cl_free > 0) {
