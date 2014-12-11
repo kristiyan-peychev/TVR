@@ -88,8 +88,11 @@ static inline void init_clients(void)
 static void init_rooms(void) 
 {
 	unsigned i = 0;
-	while (i < ROOM_COUNT + SERVER_THREAD_COUNT) 
-		rooms[i++] = room_init();
+	while (i < ROOM_COUNT + SERVER_THREAD_COUNT) {
+		rooms[i] = room_init();
+		room_set_id(rooms[i], i);
+		++i;
+	}
 }
 
 static void destroy_clients(void) 
@@ -133,13 +136,14 @@ static int request_room(int request)
 static void handle_new_connection(int *sockfd) 
 {
 	int connection;
-	char status;
+	int status;
 	int room_request;
 	size_t client_index;
 
 	/* FIXME: Save the IP somewhere, somehow */
 	/* or pass it to room_add_member */
 	connection = accept(*sockfd, NULL, NULL); 
+	fprintf(stderr, "Handling connection\n");
 	
 	if (connection < 0) {
 		perror("accept");
@@ -147,6 +151,7 @@ static void handle_new_connection(int *sockfd)
 		exit(EXIT_FAILURE);
 	} else if (clients_connected == BACKLOG) {
 		/* Error out, server is full */
+		fprintf(stderr, "Full\n");
 		status = STATUS_SERVER_FULL;
 		send(connection, &status, sizeof(status), 0);
 		close(connection);
@@ -155,6 +160,7 @@ static void handle_new_connection(int *sockfd)
 		&& (request_room(room_request) < 0) 
 		)
 	{ /* Error out, requested room is full */
+		fprintf(stderr, "Room full\n");
 		status = STATUS_ROOM_FULL;
 		send(connection, &status, sizeof(status), 0);
 		close(connection);
@@ -168,11 +174,18 @@ static void handle_new_connection(int *sockfd)
 		if (room_add_member(rooms[room_request], 
 				clients[client_index])) 
 		{ /* Room is full after all */
+			fprintf(stderr, "no_member\n");
 			client_destroy(clients[client_index]);
 			status = STATUS_ROOM_FULL;
 			send(connection, &status, sizeof(status), 0);
 			close(connection);
 		}
+		fprintf(stderr, "wat\n");
+		status = STATUS_SUCCESS;
+		send(connection, &status, sizeof(status), 0);
+		fprintf(stderr, "lol?\n");
+		if (room_mem_count(rooms[room_request]) < 2) 
+			room_spawn_thread(rooms[room_request]);
 
 		/*++last_client; [> FIXME thread-safe or atomic; Is this useless? <]*/
 	}
@@ -283,6 +296,7 @@ int main(void)
 	highsock = sockfd;
 
 	init_clients();
+	init_rooms();
 	do {
 		build_select_list(&sockfd, &highsock);
 
@@ -296,7 +310,7 @@ int main(void)
 			perror("select");
 			exit(EXIT_FAILURE);
 		} else if (readsocks == 0) {
-			printf("Nothing connected yet, just reporting\n");
+			/*printf("Nothing connected yet, just reporting\n");*/
 		} else {
 			/*handle_new_connection(&sockfd);*/
 			printf("HOLY FUCKING SHIT, SOMEBODY IS CONNECTING\n");

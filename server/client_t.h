@@ -14,7 +14,7 @@
 #include "room_t.h"
 
 /* FIXME test size, if possible make it bigger */
-#define CLIENT_BUFFER_SIZE 128
+#define CLIENT_BUFFER_SIZE 4096
 
 struct client_t {
 	unsigned cl_id;
@@ -33,6 +33,7 @@ struct client_t {
 /* client.c */
 struct client_t *client_init(void); 
 int client_buff_push(struct client_t *, char *, size_t); 
+void client_dc(struct client_t *);
 
 /* inlined */
 void client_set_id(struct client_t *, const unsigned);

@@ -7,12 +7,13 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-
 #include <arpa/inet.h>
+
+#include "status.h"
 
 #define PORT "3490" // the port client will be connecting to 
 
-#define PATH_TO_RECORD "~kawaguchi/record_bkup/client/record"
+#define PATH_TO_RECORD "/home/kawaguchi/record_bkup/client/record"
 #define PATH_TO_PLAYBACK "/usr/bin/aplay"
 
 #define BUFF_SIZE 4096
@@ -20,6 +21,7 @@
 
 void recv_handler(int *sock) 
 {
+	int i = 0;
 	char **ename;
 
 	if (*sock < 0) {
@@ -30,9 +32,11 @@ void recv_handler(int *sock)
 	fprintf(stderr, "Recieving on socket: %d\n", *sock);
 
 	ename = (char **) malloc(4 * sizeof(*ename)); 
-	*ename = (char **) malloc((32 * 4) * sizeof(**ename)); 
-	while (i < 4) 
-		*(ename + i) = *ename + (128 * i++);
+	*ename = (char *) malloc((32 * 4) * sizeof(**ename)); 
+	while (i < 4) {
+		*(ename + i) = *ename + (128 * i);
+		++i;
+	}
 	
 	strcpy(*ename, PATH_TO_PLAYBACK);
 	strcpy(*(ename + 1), "-f");
@@ -64,19 +68,22 @@ void *get_in_addr(struct sockaddr *sa)
 
 int main(int argc, char *argv[])
 {
-	int sockfd, numbytes;  
+	int sockfd;  
 	int rv, i = 0;
+	int room_request;
 	int send_pipes[2];
-	char buf[MAXDATASIZE];
+	/*char buf[MAXDATASIZE];*/
 	struct addrinfo hints, *servinfo, *p;
 	char s[INET6_ADDRSTRLEN];
-	char **ename = (char **) malloc(4 * sizeof(char *));
+	char **ename = (char **) malloc(4 * sizeof(*ename)); 
 	char buff[BUFF_SIZE];
 
-	if (argc != 2) {
-		fprintf(stderr,"usage: client hostname\n");
+	if (argc != 3) {
+		fprintf(stderr,"usage: client hostname room\n");
 		exit(1);
 	}
+
+	room_request = atoi(*(argv + 2));
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -116,6 +123,7 @@ int main(int argc, char *argv[])
 
 	/*0888318047*/
 
+	/*ename = (char **) malloc(4 * sizeof(char *))*/
 	*ename = (char *) malloc((128 * 4) * sizeof(char));
 	while (i < 4) {
 		*(ename + i) = *ename + (128 * i);
@@ -125,6 +133,21 @@ int main(int argc, char *argv[])
 	strcpy(*(ename + 0), PATH_TO_RECORD);
 	strcpy(*(ename + 1), "-");
 	*(ename + 2) = (char *) NULL;
+
+	fprintf(stderr, "send\n");
+	if (send(sockfd, &room_request, sizeof(room_request), 0) < 0) {
+		perror("send");
+		exit(EXIT_FAILURE);
+	}
+	fprintf(stderr, "recv\n");
+	if (recv(sockfd, &room_request, sizeof(room_request), 0) < 0) {
+		perror("recv");
+		exit(EXIT_FAILURE);
+	}
+
+	fprintf(stderr, "Server sent status 0x%x\n", room_request);
+	if (room_request != STATUS_SUCCESS) 
+		exit(EXIT_SUCCESS);
 
 	if (pipe(send_pipes)) {
 		close(sockfd);
@@ -149,7 +172,6 @@ int main(int argc, char *argv[])
 		/*i = 0;*/
 
 		recv_handler(&sockfd);
-
 		while (read(send_pipes[0], buff, BUFF_SIZE) > 0) 
 			send(sockfd, buff, BUFF_SIZE, 0);
 		close(sockfd);

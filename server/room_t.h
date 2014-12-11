@@ -7,7 +7,7 @@
 #include "client_t.h"
 
 #define ROOM_MAX_MEMBERS 4 
-#define PULL_SZ 128
+#define PULL_SZ 1024
 
 struct room_t {
 	unsigned rm_id;
@@ -16,7 +16,7 @@ struct room_t {
 	size_t rm_mem_count;
 	size_t rm_size; /* of members */
 	
-	pthread_mutex_t *rm_locked;
+	pthread_mutex_t rm_locked;
 	pthread_t rm_thread;
 
 	fd_set rm_sockset;
@@ -32,6 +32,7 @@ void room_set_id(struct room_t *, unsigned);
 char room_add_member(struct room_t *, struct client_t *);
 size_t room_free_space(struct room_t *);
 char room_remove_member(struct room_t *, struct client_t *);
+size_t room_mem_count(struct room_t *);
 /* Arguments: target, buffer, buffer size, sender */
 char room_send(struct room_t *, char *, size_t, struct client_t *);
 
