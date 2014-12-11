@@ -7,7 +7,7 @@
 #include "client_t.h"
 
 #define ROOM_MAX_MEMBERS 4 
-#define PULL_SZ 1024
+#define PULL_SZ 16384
 
 struct room_t {
 	unsigned rm_id;

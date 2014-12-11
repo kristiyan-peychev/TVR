@@ -16,7 +16,7 @@
 #define PATH_TO_RECORD "/home/kawaguchi/record_bkup/client/record"
 #define PATH_TO_PLAYBACK "/usr/bin/aplay"
 
-#define BUFF_SIZE 4096
+#define BUFF_SIZE 16384
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
 void recv_handler(int *sock) 
